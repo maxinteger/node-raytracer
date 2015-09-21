@@ -1,0 +1,16 @@
+{
+  "name": "project-raytracer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "canvas": "^1.2.9",
+    "gl-matrix": "^2.3.1",
+    "mathjs": "^2.2.0"
+  }
+}
