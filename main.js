@@ -6,7 +6,7 @@ var fs = require('fs'),
 
 var RAD = Math.PI / 180,
     stack = Object.create(TransformStack),
-    vec3 = () => new Float32Array(3),
+    vec3 = (a) => glm.glMatrix.ARRAY_TYPE.from.call(glm.glMatrix.ARRAY_TYPE, a || [0,0,0]),
     mat4 = () => new Float32Array(16);
 
 
@@ -21,8 +21,9 @@ function readSceneFile(fileName){
             var cmd = line[0],
                 params =  _(line).tail().map(parseFloat).run();
 
-
             switch(cmd){
+                case 'output':
+                    res.outout = line[1]; break;
                 case 'size':
                     res.size = { width: params[0], height: params[1] }; break;
                 case 'camera':
@@ -46,7 +47,7 @@ function readSceneFile(fileName){
             }
         }
         return res;
-    }, { vertex: [], vertexNorm: [], states: [] });
+    }, { vertex: [], vertexNorm: [], states: [{ cmd: 'ambient', params: [.2, .2, .2]}] });
 }
 
 function writePNG (fileName, canvas){
@@ -67,21 +68,23 @@ function rayTruPixel(camera, width, height, i, j){
         b = camera.up,
         w = glm.vec3.normalize(vec3(), a),
         u = glm.vec3.normalize(vec3(), glm.vec3.cross(vec3, b, w)),
-        v = glm.vec3.cross(vec3, w, u),
+        v = glm.vec3.cross(vec3(), w, u),
         alpha = Math.tan(camera.fovx / 2) * ((j - (width / 2)) / (width / 2)),
         beta = Math.tan(camera.fovy / 2) * ((i - (height / 2)) / (height / 2)),
         alphaU = u.map(i => i * alpha),
         betaV = v.map(i => i * beta),
-        aUbVW = glm.vec3.substract(glm.vec3.add(vec3(), alphaU, betaV), w);
+        aUbVW = glm.vec3.subtract(vec3(), glm.vec3.add(vec3(), alphaU, betaV), w);
 
-    return glm.vec3.add(vec3(), eye, glm.vec3.normalize(vec3(), aUbVW));
+    return glm.vec3.add(vec3(), camera.eye, glm.vec3.normalize(vec3(), aUbVW));
 }
 
 function intersect (ray, world){
 
 }
 
-function findColor (hit){}
+function findColor (hit){
+    return vec3([255, 0, 0, 255]);
+}
 
 function putPixel (img, x, y, color){
     var idx = y * (img.width * 4) + (x * 4);
@@ -93,33 +96,47 @@ function raytrace(img, camera, world, width, height){
         for (var j = 0; j < width; j++){
             var ray = rayTruPixel(camera, i, j),
                 hit = intersect (ray, world);
-            putPixel(img, i,j, findColor (hit));
+            putPixel(img, j, i, findColor (hit));
         }
     }
 }
 
 function createWorld(stack, scene){
 
-    scene.states.reduce((world, state) => {
+    return scene.states.reduce((world, state) => {
          switch (state.cmd){
+             case 'pushTransform':
+                 stack.push(); break;
+             case 'popTransform':
+                 stack.pop(); break;
+             case 'scale':
+                 stack.scale(vec3(state.params)); break;
              case 'translate':
-                 stack.push()
+                 stack.translate(vec3(state.params)); break;
+             case 'rotate':
+                 stack.rotate(vec3(state.params * RAD, state.params.slice(0,3))); break;
+             case 'tri':
+                 world.objects.push(
+                     state.params.map((idx) =>
+                         glm.vec3.transformMat4(vec3(), vec3(scene.vertex[idx]), stack.top())
+                     )
+                 ); break;
+             case 'trinormal':
              case 'sphere':
-
+                 break;
          }
-    });
+        return world;
+    }, {objects: []});
 }
 
 // read scene
 var scene = readSceneFile(__dirname + '/scene1.test'),
+    world = {},
     width = scene.size.width,
     height = scene.size.height,
     canvas = new Canvas(width, height),
     ctx = canvas.getContext('2d'),
     imgData = ctx.createImageData(width, height);
-
-console.log(JSON.stringify(scene, null, 3));
-
 
 // setup the scene
 var projection = glm.mat4.perspective(mat4(), 45, 1, 0.001, 100),
@@ -129,7 +146,12 @@ var projection = glm.mat4.perspective(mat4(), 45, 1, 0.001, 100),
     MVP = glm.mat4.multiply(mat4(), VP, model);
 
 stack.push(MVP);
+world = createWorld(stack, scene);
 // calculate raytrace
 
+raytrace(imgData, scene.camera, world, width, height);
+
+ctx.putImageData(imgData, 0, 0);
+
 // save result
-writePNG(__dirname + '/text.png', canvas);
+writePNG(__dirname + '/' + (scene.outout || 'test.png'), canvas);
