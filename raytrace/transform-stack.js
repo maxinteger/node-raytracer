@@ -18,7 +18,7 @@ module.exports = Object.assign(Object.create(null), {
         }
     },
 
-    top(){
+    top (){
         return this.stack[this.stack.length-1];
     }
 }, ['mul', 'translate', 'scale', 'rotate'].reduce((stack, fn) => {

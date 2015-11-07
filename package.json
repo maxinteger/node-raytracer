@@ -1,16 +1,21 @@
 {
   "name": "project-raytracer",
   "version": "1.0.0",
-  "description": "",
+  "description": "Node raytrace implementation with 3D dump data viewer for debugging",
   "main": "main.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
+  "author": "Laszlo Vadasz",
   "license": "MIT",
   "dependencies": {
     "canvas": "^1.2.9",
     "gl-matrix": "^2.3.1",
-    "mathjs": "^2.2.0"
+    "mathjs": "^2.2.0",
+    "three.js": "^0.72.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.1.2",
+    "babel-preset-es2015": "^6.1.2"
+  },
+  "scripts": {
+    "start": "babel-node --presets es2015 raytrace/main.js"
   }
 }
