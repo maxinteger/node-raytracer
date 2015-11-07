@@ -1,5 +1,4 @@
 var container,
-    stats,
     camera,
     scene,
     renderer,
@@ -18,6 +17,7 @@ fetch('dump.json')
     });
 
 function init() {
+    "use strict";
 
     container = document.getElementById( 'container' );
 
@@ -38,12 +38,13 @@ function init() {
         GRID_SIZE = 10,
         WHITE = new THREE.Vector3(1,1,1),
         GRAY = new THREE.Vector3(.5,.5,.5),
-        RED = new THREE.Vector3(1,0,0),
-        GREEN = new THREE.Vector3(0,1,0),
-        BLUE = new THREE.Vector3(0,0,1)
+        DARK_GRAY = new THREE.Vector3(.01,.01,.01),
+        RED = new THREE.Vector3(0.1,0,0),
+        GREEN = new THREE.Vector3(0,0.1,0),
+        BLUE = new THREE.Vector3(0,0,0.1)
         ;
 
-    function add_vertex(v, color) {
+    function addVertex(v, color) {
         color = color || WHITE;
         if (next_positions_index == 0xffff) throw new Error("Too many points");
 
@@ -53,40 +54,50 @@ function init() {
         indices_array.push(next_positions_index-1);
     }
 
-    add_vertex(new THREE.Vector3(-100, 0, 0), RED);
-    add_vertex(new THREE.Vector3(100, 0, 0), RED);
-    add_vertex(new THREE.Vector3(0, -100, 0), GREEN);
-    add_vertex(new THREE.Vector3(0, 100, 0), GREEN);
-    add_vertex(new THREE.Vector3(0, 0, -100), BLUE);
-    add_vertex(new THREE.Vector3(0, 0, 100), BLUE);
+    addVertex(new THREE.Vector3(-100, 0, 0), RED);
+    addVertex(new THREE.Vector3(100, 0, 0), RED);
+    addVertex(new THREE.Vector3(0, -100, 0), GREEN);
+    addVertex(new THREE.Vector3(0, 100, 0), GREEN);
+    addVertex(new THREE.Vector3(0, 0, -100), BLUE);
+    addVertex(new THREE.Vector3(0, 0, 100), BLUE);
 
     // grid
-    for (var x = -GRID_SIZE; x <= GRID_SIZE; x++){
+    for (let x = -GRID_SIZE; x <= GRID_SIZE; x++){
         if (x !== 0){
-            add_vertex(new THREE.Vector3(-10, 0, x), GRAY);
-            add_vertex(new THREE.Vector3( 10, 0, x), GRAY);
-            add_vertex(new THREE.Vector3(x, 0, -10), GRAY);
-            add_vertex(new THREE.Vector3(x, 0,  10), GRAY);
+            addVertex(new THREE.Vector3(-10, 0, x), DARK_GRAY);
+            addVertex(new THREE.Vector3( 10, 0, x), DARK_GRAY);
+            addVertex(new THREE.Vector3(x, 0, -10), DARK_GRAY);
+            addVertex(new THREE.Vector3(x, 0,  10), DARK_GRAY);
         }
     }
 
     var eye = new THREE.Vector3(dump.camera.eye['0'], dump.camera.eye['1'], dump.camera.eye['2']);
-    for (var i = 0; i < dump.ray.length; i ++){
-        add_vertex(eye);
-        add_vertex(new THREE.Vector3(dump.ray[i][0],dump.ray[i][1],dump.ray[i][2]));
+    for (let i = 0; i < dump.ray.length; i ++){
+        let color = WHITE,
+            target = new THREE.Vector3(dump.ray[i][0],dump.ray[i][1],dump.ray[i][2]);
 
-        add_vertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]));
-        add_vertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]).multiplyScalar(1.1));
+        if(i === 0 || i === dump.scene.width-1 || i === dump.ray.length - dump.scene.width || i === dump.ray.length -1){
+            color = GRAY;
+            target = eye.clone().add(target.sub(eye).multiplyScalar(10));
+        }
+        addVertex(eye, color);
+        addVertex(target, color);
+
+        addVertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]));
+        addVertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]).multiplyScalar(1.1));
     }
 
-    for (var i = 0; i < dump.obj.length; i ++){
-        var obj = dump.obj[i].data;
+    for (let i = 0; i < dump.obj.length; i ++){
+        let obj = dump.obj[i].data;
         for (var j = 0; j < obj.length; j++){
-            var x = j === 0 ? obj.length-1 : j-1;
-            add_vertex(new THREE.Vector3(obj[x]['0'], obj[x]['1'], obj[x]['2']));
-            add_vertex(new THREE.Vector3(obj[j]['0'], obj[j]['1'], obj[j]['2']));
+            let x = j === 0 ? obj.length-1 : j-1;
+            addVertex(new THREE.Vector3(obj[x]['0'], obj[x]['1'], obj[x]['2']));
+            addVertex(new THREE.Vector3(obj[j]['0'], obj[j]['1'], obj[j]['2']));
         }
     }
+
+    addVertex(eye, GRAY);
+    addVertex(new THREE.Vector3(dump.camera.center['0'], dump.camera.center['1'], dump.camera.center['2']), GRAY);
 
     // --------------------------------
 
@@ -96,8 +107,7 @@ function init() {
     geometry.computeBoundingSphere();
 
     mesh = new THREE.LineSegments( geometry, material );
-    //mesh.position.x -= 1200;
-    //mesh.position.y -= 1200;
+
 
     parent_node = new THREE.Object3D();
     parent_node.add(mesh);
@@ -113,11 +123,6 @@ function init() {
 
     container.appendChild( renderer.domElement );
 
-    //
-    stats = new Stats();
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.top = '0px';
-    container.appendChild( stats.domElement );
 
     window.addEventListener( 'resize', onWindowResize, false );
 }
@@ -132,15 +137,8 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame( animate );
     render();
-    stats.update();
 }
 
 function render() {
-    var time = Date.now() * 0.001;
-    //mesh.rotation.x = time * 0.25;
-    //mesh.rotation.y = time * 0.5;
-    //parent_node.rotation.x = time * 0.5;
-    //parent_node.rotation.y = time * 0.5;
-    //parent_node.rotation.z = time * 0.5;
     renderer.render( scene, camera );
 }

@@ -34,7 +34,7 @@ function readSceneFile(fileName){
                 case 'output':
                     res.outout = line[1]; break;
                 case 'size':
-                    res.size = { width: params[0], height: params[1] }; break;
+                    dump.scene = res.size = { width: params[0], height: params[1] }; break;
                 case 'camera':
                     var fovy = params[9] * RAD;
                     res.camera = {
