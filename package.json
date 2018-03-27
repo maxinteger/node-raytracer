@@ -17,6 +17,7 @@
     "babel-preset-es2015": "^6.1.2"
   },
   "scripts": {
+    "server": "python -m SimpleHTTPServer",
     "start": "babel-node --presets es2015 raytrace/main.js"
   }
 }

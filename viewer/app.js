@@ -71,6 +71,7 @@ function init() {
         }
     }
 
+    // rays and
     var eye = new THREE.Vector3(dump.camera.eye['0'], dump.camera.eye['1'], dump.camera.eye['2']);
     for (let i = 0; i < dump.ray.length; i ++){
         let color = WHITE,
@@ -80,13 +81,17 @@ function init() {
             color = GRAY;
             target = eye.clone().add(target.sub(eye).multiplyScalar(10));
         }
+        if (dump.hit.indexOf(i) > -1){
+            color = RED;
+        }
         addVertex(eye, color);
         addVertex(target, color);
 
-        addVertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]));
-        addVertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]).multiplyScalar(1.1));
+        //addVertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]), new THREE.Vector3(1,0,0));
+        //addVertex(new THREE.Vector3(dump.tri[i][0],dump.tri[i][1],dump.tri[i][2]).multiplyScalar(1.1));
     }
 
+    // Object
     for (let i = 0; i < dump.obj.length; i ++){
         let obj = dump.obj[i].data;
         for (var j = 0; j < obj.length; j++){

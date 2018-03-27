@@ -14,11 +14,12 @@ const RAD = Math.PI / 180,
       tap = (a) => (print(a), a);
 
 map(pick(glm.vec3, isFunction), (fn, name) => {
-    vec3[name === 'length' ? 'len' : name]  = (...a) => fn(vec3(), ...a)
+    vec3[name === 'length' ? 'len' : name] = (...a) => fn(vec3(), ...a)
 });
+vec3.dot = glm.vec3.dot;
 
 
-var dump = {ray : [], tri:[], obj: []};
+var dump = {ray : [], tri:[], obj: [], hit: []};
 
 function readSceneFile(fileName){
     var reSkip = /(:?^\s*#|^$)/,
@@ -73,20 +74,22 @@ function writePNG (fileName, canvas){
     });
 }
 
-function rayTruPixel(camera, width, height, i, j){
+function rayTruPixel(camera, width, height, x, y){
     var a = vec3.subtract(camera.eye, camera.center),
         b = camera.up,
         w = vec3.normalize(a),
         u = vec3.normalize(vec3.cross(b, w)),
         v = vec3.cross(w, u),
-        alpha = Math.tan(camera.fovx / 2) * ((j - (width / 2)) / (width / 2)),
-        beta = Math.tan(camera.fovy / 2) * ((i - (height / 2)) / (height / 2)),
+        alpha = Math.tan(camera.fovx / 2) * ((y - (width / 2)) / (width / 2)),
+        beta = Math.tan(camera.fovy / 2) * ((x - (height / 2)) / (height / 2)),
         alphaU = u.map(i => i * alpha),
         betaV = v.map(i => i * beta),
         aUbVW = vec3.subtract(vec3.add(alphaU, betaV), w),
         ray = {
             p0: camera.eye,
-            dir: vec3.add(camera.eye, vec3.normalize(aUbVW))
+            dir: vec3.add(camera.eye, vec3.normalize(aUbVW)),
+            idx: y * width + x,
+            x, y
         };
     dump.ray.push(_.toArray(ray.dir));
     return ray;
@@ -106,18 +109,57 @@ function intersection (ray, world){
     return Number.isFinite(minDist) && hitObj !== null ? {dist: minDist, obj: hitObj} : null;
 }
 
+/**
+ * @link http://www.lighthouse3d.com/tutorials/maths/ray-triangle-intersection/
+ */
 function triangleIntersect(ray, object){
+    var [A, B, C] = object.data,
+        e1 = vec3.sub(B, A),
+        e2 = vec3.sub(C, A),
+        h = vec3.cross(ray.dir, e2),
+        a = vec3.dot(e1, h);
+
+    if (a > -0.00001 && a < 0.00001)
+        return false;
+
+    var f = 1 / a,
+        s = vec3.sub(ray.p0, A),
+        u = f * (vec3.dot(s, h));
+
+    if (u < 0.0 || u > 1.0)
+        return false;
+
+    var q = vec3.cross(s, e1),
+        v = f * vec3.dot(ray.dir, q);
+
+
+    if (v < 0.0 || u + v > 1.0)
+        return false;
+
+    var t = f * vec3.dot(e2, q);
+
+    dump.hit.push(ray.idx);
+    if (t > 0.00001) { // ray intersection
+        return true;
+    } else
+        return false;
+
+/*
     var A = object.data[0],
         n = object.norm;
     var x = vec3.divide(vec3.subtract(vec3.mul(A, n), vec3.mul(ray.p0, n)), vec3.mul(ray.dir, n));
-    console.log(n);
+    console.log(x);
     dump.tri.push(_.toArray(x));
     return x;
+    */
 }
 
 function intersect(ray, object){
     switch (object.type){
-        case 'try': return triangleIntersect(ray, object);
+        case 'try':
+            let val = triangleIntersect(ray, object);
+
+            return val;
         default: return 0;
     }
 }
